@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(MyVulkanApp)
+project(PhysicEngine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,10 +33,10 @@ file(GLOB SOURCES
 )
 
 # ==== TARGET ====
-add_executable(MyVulkanApp ${SOURCES})
+add_executable(PhysicEngine ${SOURCES})
 
 # ==== LINK DIRECTORIES ====
-target_link_directories(MyVulkanApp PRIVATE
+target_link_directories(PhysicEngine PRIVATE
     ${GLFW_LIB_DIR}
     ${VULKAN_LIB_DIR}
 )
@@ -60,9 +60,9 @@ execute_process(
 # ==== LINK LIBRARIES ====
 # You may need to adjust the exact Vulkan library name based on your platform
 if(WIN32)
-    target_link_libraries(MyVulkanApp PRIVATE glfw3 vulkan-1)
+    target_link_libraries(PhysicEngine PRIVATE glfw3 vulkan-1)
 elseif(APPLE)
-    target_link_libraries(MyVulkanApp PRIVATE glfw vulkan)
+    target_link_libraries(PhysicEngine PRIVATE glfw vulkan)
 else()
-    target_link_libraries(MyVulkanApp PRIVATE glfw vulkan)
+    target_link_libraries(PhysicEngine PRIVATE glfw vulkan)
 endif()

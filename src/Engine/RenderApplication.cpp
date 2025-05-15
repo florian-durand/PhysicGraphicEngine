@@ -1,5 +1,7 @@
-#include <RenderApplication.hpp>
-#include <Utils.hpp>
+#include <Engine/RenderApplication.hpp>
+#include <Engine/Utils.hpp>
+#include <Meshes/Mesh.hpp>
+#include <Meshes/Transformation.hpp>
 
 // Debug Part
 
@@ -316,7 +318,7 @@ void RenderApplication::createDescriptorSetLayout()
 
 void RenderApplication::createIndexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(data.indices[0]) * data.indices.size();
+    VkDeviceSize bufferSize = data.object.getMesh().getIndexDataSize() * data.object.getMesh().getIndicesSize();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -324,7 +326,7 @@ void RenderApplication::createIndexBuffer()
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, this->data.indices.data(), (size_t)bufferSize);
+    memcpy(data, this->data.object.getMesh().getIndices(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -366,7 +368,7 @@ void RenderApplication::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage
 
 void RenderApplication::createVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(data.vertices[0]) * data.vertices.size();
+    VkDeviceSize bufferSize = data.object.getMesh().getVertexDataSize() * data.object.getMesh().getVerticesSize();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -374,7 +376,7 @@ void RenderApplication::createVertexBuffer()
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, this->data.vertices.data(), (size_t)bufferSize);
+    memcpy(data, this->data.object.getMesh().getVertices(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -562,7 +564,7 @@ void RenderApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(data.indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(data.object.getMesh().getIndicesSize()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -1241,7 +1243,8 @@ void RenderApplication::updateUniformBuffer(uint32_t currentImage)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+    ubo.model = glm::rotate(glm::mat4(1.), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * data.object.getTransformation().getTransformationMatrix();
 
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 

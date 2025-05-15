@@ -23,9 +23,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <ShaderVertex.hpp>
-#include <CustomData.hpp>
-#include <UniformBufferObject.hpp>
+#include <Engine/ShaderVertex.hpp>
+#include <Engine/CustomData.hpp>
+#include <Engine/UniformBufferObject.hpp>
 
 #include <chrono>
 

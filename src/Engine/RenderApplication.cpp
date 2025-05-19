@@ -283,7 +283,7 @@ void RenderApplication::createDescriptorPool()
 
 void RenderApplication::createUniformBuffers()
 {
-    const int MAX_OBJECTS = 2000;
+    const int MAX_OBJECTS = 100;
     VkDeviceSize bufferSize = sizeof(UniformBufferObject) * MAX_OBJECTS;
 
     uniformBuffers.resize(data.MAX_FRAMES_IN_FLIGHT);
@@ -349,7 +349,7 @@ void RenderApplication::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage
 
 void RenderApplication::createVertexAndIndexBuffer()
 {
-    VkDeviceSize bufferSize = 4292870144;
+    VkDeviceSize bufferSize = 429287;
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
@@ -546,8 +546,9 @@ void RenderApplication::createObjects()
     obj1.addMesh(Cube::generateMesh());
     Object obj2 = Object{};
     obj2.addMesh(Cube::generateMesh());
+    obj1.getTransformation().setScale({1.1, 1.1, 1.1});
     data.objects.addObject(obj1, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
-    // data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
+    data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
 }
 
 void RenderApplication::createCommandPool()

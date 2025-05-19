@@ -10,9 +10,9 @@ void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBu
     VkDeviceSize vertexOffset = 0;
     uint32_t vertexCount = 0;
 
-    for (Mesh &mesh : object.getMeshes().getMeshesList())
+    for (Mesh &mesh : objectRef.getMeshes().getMeshesList())
     {
-        memcpy(mappedStagingPtr, mesh.getVerticesData(), mesh.getVerticesSize());
+        memcpy(mappedStagingPtr, mesh.getVerticesData(), mesh.getVerticesSize() * mesh.getVertexDataSize());
         vertexCount += mesh.getVerticesSize();
         vertexOffset += mesh.getVerticesSize() * mesh.getVertexDataSize();
     }
@@ -54,7 +54,7 @@ void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBu
     size_t indexCount = 0;
     for (Mesh &mesh : objectRef.getMeshes().getMeshesList())
     {
-        memcpy(mappedStagingPtr, mesh.getIndicesData(), mesh.getIndicesSize());
+        memcpy(mappedStagingPtr, mesh.getIndicesData(), mesh.getIndicesSize() * mesh.getIndexDataSize());
         indexCount += mesh.getIndicesSize();
         indexOffset += mesh.getIndicesSize() * mesh.getIndexDataSize();
     }

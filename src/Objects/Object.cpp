@@ -39,17 +39,15 @@ void Object::draw(size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, V
 
     UniformBufferObject ubo{};
 
-    ubo.model = glm::mat4(1.0); // tranformation.getTransformationMatrix();
+    ubo.model = tranformation.getTransformationMatrix();
 
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(3.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
     ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 10.0f);
 
     ubo.proj[1][1] *= -1;
 
-    void *dst = uboPtr + dynamicOffset;
-
-    memcpy(dst, &ubo, sizeof(ubo));
+    memcpy((char *)uboPtr + dynamicOffset, &ubo, sizeof(ubo));
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
 

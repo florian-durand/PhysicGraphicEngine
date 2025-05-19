@@ -23,9 +23,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <ShaderVertex.hpp>
-#include <CustomData.hpp>
-#include <UniformBufferObject.hpp>
+#include <Engine/ShaderVertex.hpp>
+#include <Engine/CustomData.hpp>
+#include <Engine/UniformBufferObject.hpp>
 
 #include <chrono>
 
@@ -56,11 +56,9 @@ private:
 
     void createDescriptorSetLayout();
 
-    void createIndexBuffer();
-
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
 
-    void createVertexBuffer();
+    void createVertexAndIndexBuffer();
 
     void recreateSwapChain();
 
@@ -74,7 +72,7 @@ private:
 
     void createCommandBuffer();
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame);
 
     void createCommandPool();
 
@@ -132,6 +130,8 @@ private:
     // Create Vulkan instance
     void createInstance();
 
+    void createObjects();
+
     void checkExtensionsValidity(const std::vector<const char *> &glfwExtensions, const std::vector<VkExtensionProperties> &extensions);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -143,8 +143,6 @@ private:
     void mainLoop();
 
     void drawFrame();
-
-    void updateUniformBuffer(uint32_t currentImage);
 
     void cleanup();
 
@@ -184,6 +182,9 @@ private:
     std::vector<VkDescriptorSet> descriptorSets;
     uint32_t currentFrame = 0;
     bool framebufferResized = false;
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    void *mappedStagingBuffer;
 
     const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"};

@@ -1,0 +1,103 @@
+#include <Objects/Objects.hpp>
+
+size_t Objects::previousVertexOffset = 0;
+size_t Objects::previousIndexOffset = 0;
+
+void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkBuffer &stagingBuffer, void *mappedStagingPtr, VkCommandPool &commandPool, VkDevice &device, VkQueue graphicsQueue)
+{
+    // look how to implement vertex offset to keep track of new objects
+    Object &objectRef = objects.emplace_back(object);
+    VkDeviceSize vertexOffset = 0;
+    uint32_t vertexCount = 0;
+
+    for (Mesh &mesh : objectRef.getMeshes().getMeshesList())
+    {
+        memcpy(mappedStagingPtr, mesh.getVerticesData(), mesh.getVerticesSize() * mesh.getVertexDataSize());
+        vertexCount += mesh.getVerticesSize();
+        vertexOffset += mesh.getVerticesSize() * mesh.getVertexDataSize();
+    }
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;                             // Optional
+    copyRegion.dstOffset = Objects::previousVertexOffset; // Optional
+    copyRegion.size = vertexOffset;
+    vkCmdCopyBuffer(commandBuffer, stagingBuffer, vertexBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(graphicsQueue);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+
+    objectRef.setVertexOffset(previousVertexOffset);
+
+    size_t indexOffset = 0;
+    size_t indexCount = 0;
+    for (Mesh &mesh : objectRef.getMeshes().getMeshesList())
+    {
+        memcpy(mappedStagingPtr, mesh.getIndicesData(), mesh.getIndicesSize() * mesh.getIndexDataSize());
+        indexCount += mesh.getIndicesSize();
+        indexOffset += mesh.getIndicesSize() * mesh.getIndexDataSize();
+    }
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    copyRegion.srcOffset = 0;                            // Optional
+    copyRegion.dstOffset = Objects::previousIndexOffset; // Optional
+    copyRegion.size = indexOffset;
+    vkCmdCopyBuffer(commandBuffer, stagingBuffer, indexBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer(commandBuffer);
+
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(graphicsQueue);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+
+    objectRef.setIndexOffset(previousIndexOffset);
+
+    previousVertexOffset += vertexOffset;
+    previousIndexOffset += indexOffset;
+    objectRef.setTotalIndexCount(indexCount);
+}
+
+void Objects::drawAll(VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
+{
+    size_t index = 0;
+    for (Object &object : objects)
+    {
+        object.draw(index, vertexBuffer, indexBuffer, commandBuffer, width, height, uboPtr, pipelineLayout, descriptorSet);
+        index++;
+    }
+}

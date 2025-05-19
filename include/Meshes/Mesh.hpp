@@ -11,11 +11,15 @@ public:
 
     void addTriangleFan(uint16_t index1, uint16_t index2, uint16_t index3);
 
-    const ShaderVertex *getVertices();
+    const ShaderVertex *getVerticesData();
+
+    std::vector<ShaderVertex> &getVertices();
 
     std::size_t getVerticesSize();
 
-    uint16_t *getIndices();
+    std::vector<uint16_t> &getIndices();
+
+    uint16_t *getIndicesData();
 
     std::size_t getIndicesSize();
 

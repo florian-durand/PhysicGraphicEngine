@@ -11,7 +11,8 @@ set(GLFW_LIB_DIR     "C:/Users/Professionel/Desktop/Libraries/glfw-3.4.bin.WIN64
 set(GLM_INCLUDE_DIR  "C:/Users/Professionel/Desktop/Libraries/glm-1.0.1/glm")
 set(VULKAN_INCLUDE_DIR "D:/Vulkan/Include")
 set(VULKAN_LIB_DIR     "D:/Vulkan/Lib")
-set(SHADERS_FOLDER "build/shaders")
+set(SHADERS_BUILD_FOLDER "build/shaders")
+set(SHADERS_FOLDER "shaders/")
 set(GLSL_COMPILER "D:/Vulkan/Bin/glslc.exe")
 
 # ==== INCLUDE DIRECTORIES ====
@@ -44,7 +45,7 @@ target_link_directories(PhysicEngine PRIVATE
 )
 
 execute_process(
-    COMMAND ${GLSL_COMPILER} ${SHADERS_FOLDER}/shader.vert -o ${SHADERS_FOLDER}/vert.spv
+    COMMAND ${GLSL_COMPILER} ${SHADERS_FOLDER}/shader.vert -o ${SHADERS_BUILD_FOLDER}/vert.spv
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE GLSLC_RESULT
     OUTPUT_VARIABLE GLSLC_OUTPUT
@@ -52,15 +53,7 @@ execute_process(
 )
 
 execute_process(
-    COMMAND ${GLSL_COMPILER} ${SHADERS_FOLDER}/shader.frag -o ${SHADERS_FOLDER}/frag.spv
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    RESULT_VARIABLE GLSLC_RESULT
-    OUTPUT_VARIABLE GLSLC_OUTPUT
-    ERROR_VARIABLE GLSLC_ERROR
-)
-
-execute_process(
-    COMMAND ${GLSL_COMPILER} ${SHADERS_FOLDER}/shader.frag -o ${SHADERS_FOLDER}/frag.spv
+    COMMAND ${GLSL_COMPILER} ${SHADERS_FOLDER}/shader.frag -o ${SHADERS_BUILD_FOLDER}/frag.spv
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE GLSLC_RESULT
     OUTPUT_VARIABLE GLSLC_OUTPUT

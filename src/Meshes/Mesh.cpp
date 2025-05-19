@@ -13,7 +13,12 @@ void Mesh::addTriangleFan(uint16_t index1, uint16_t index2, uint16_t index3)
     indices.emplace_back(index3);
 }
 
-const ShaderVertex *Mesh::getVertices()
+std::vector<ShaderVertex> &Mesh::getVertices()
+{
+    return vertices;
+}
+
+const ShaderVertex *Mesh::getVerticesData()
 {
     return vertices.data();
 }
@@ -23,7 +28,12 @@ std::size_t Mesh::getVerticesSize()
     return vertices.size();
 }
 
-uint16_t *Mesh::getIndices()
+std::vector<uint16_t> &Mesh::getIndices()
+{
+    return indices;
+}
+
+uint16_t *Mesh::getIndicesData()
 {
     return indices.data();
 }

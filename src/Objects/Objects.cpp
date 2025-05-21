@@ -2,6 +2,7 @@
 
 size_t Objects::previousVertexOffset = 0;
 size_t Objects::previousIndexOffset = 0;
+std::chrono::_V2::system_clock::time_point Objects::lastTime = std::chrono::high_resolution_clock::now();
 
 void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkBuffer &stagingBuffer, void *mappedStagingPtr, VkCommandPool &commandPool, VkDevice &device, VkQueue graphicsQueue)
 {
@@ -94,10 +95,13 @@ void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBu
 
 void Objects::drawAll(VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
 {
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float delta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+    lastTime = currentTime;
     size_t index = 0;
     for (Object &object : objects)
     {
-        object.draw(index, vertexBuffer, indexBuffer, commandBuffer, width, height, uboPtr, pipelineLayout, descriptorSet);
+        object.draw(delta, index, vertexBuffer, indexBuffer, commandBuffer, width, height, uboPtr, pipelineLayout, descriptorSet);
         index++;
     }
 }

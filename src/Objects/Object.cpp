@@ -32,8 +32,10 @@ void Object::setTotalIndexCount(uint32_t totalIndexCount)
     this->totalIndexCount = totalIndexCount;
 }
 
-void Object::draw(size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
+void Object::draw(float delta, size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
 {
+
+    tranformation.rotate({0, 0, delta * 1});
 
     uint32_t dynamicOffset = index * sizeof(UniformBufferObject);
 

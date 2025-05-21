@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <Objects/Object.hpp>
+#include <chrono>
 
 class Objects
 {
@@ -17,4 +18,5 @@ private:
     std::vector<uint16_t> indices;
     static size_t previousVertexOffset;
     static size_t previousIndexOffset;
+    static std::chrono::_V2::system_clock::time_point lastTime;
 };

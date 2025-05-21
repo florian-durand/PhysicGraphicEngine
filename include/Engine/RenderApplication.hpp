@@ -22,10 +22,13 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <atomic>
 
 #include <Engine/ShaderVertex.hpp>
 #include <Engine/CustomData.hpp>
 #include <Engine/UniformBufferObject.hpp>
+#include <Engine/WindowManager.hpp>
+#include <Engine/VulkanConnector.hpp>
 
 #include <chrono>
 
@@ -35,16 +38,6 @@ public:
     void run();
 
 private:
-    static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger);
-
-    static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks *pAllocator);
-
-    bool checkValidationLayerSupport();
-    // Initialize glfw window
-    void initWindow();
-
-    static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
-
     // Initialize Vulkan
     void initVulkan();
 
@@ -88,8 +81,6 @@ private:
 
     void createSwapChain();
 
-    void createSurface();
-
     void createLogicalDevice();
 
     struct SwapChainSupportDetails
@@ -123,26 +114,14 @@ private:
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
-
-    void setupDebugMessenger();
-
     // Create Vulkan instance
     void createInstance();
 
     void createObjects();
 
-    void checkExtensionsValidity(const std::vector<const char *> &glfwExtensions, const std::vector<VkExtensionProperties> &extensions);
-
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-        void *pUserData);
-
     void mainLoop();
 
-    void drawFrame();
+    void drawFrame(std::atomic<bool> &keepRendenring);
 
     void cleanup();
 
@@ -164,12 +143,9 @@ private:
 
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-    GLFWwindow *window;
-    VkInstance instance;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
     VkQueue graphicsQueue;
-    VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
     VkQueue presentQueue;
     VkSwapchainKHR swapChain;
@@ -200,20 +176,13 @@ private:
     VkDescriptorPool descriptorPool;
     std::vector<VkDescriptorSet> descriptorSets;
     uint32_t currentFrame = 0;
-    bool framebufferResized = false;
     VkImage depthImage;
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
+    WindowManager windowManager;
+    VulkanConnector vulkanConnector;
 
-    const std::vector<const char *> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"};
     const std::vector<const char *> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     CustomData data;
-
-#ifdef NDEBUG
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
 };

@@ -2,88 +2,21 @@
 #include <Engine/Utils.hpp>
 #include <Meshes/Mesh.hpp>
 #include <Meshes/Transformation.hpp>
-
-// Debug Part
-
-VkResult RenderApplication::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
-{
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr)
-    {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    }
-    else
-    {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
-void RenderApplication::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks *pAllocator)
-{
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr)
-    {
-        func(instance, debugMessenger, pAllocator);
-    }
-}
-
-bool RenderApplication::checkValidationLayerSupport()
-{
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    for (const char *layerName : validationLayers)
-    {
-        bool layerFound = false;
-
-        for (const auto &layerProperties : availableLayers)
-        {
-            if (strcmp(layerName, layerProperties.layerName) == 0)
-            {
-                layerFound = true;
-                break;
-            }
-        }
-
-        if (!layerFound)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// App Part
+#include <thread>
 
 void RenderApplication::run()
 {
-    initWindow();
+    windowManager.initWindow(camera);
     initVulkan();
     mainLoop();
     cleanup();
 }
 
-// Initialize glfw window
-void RenderApplication::initWindow()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    window = glfwCreateWindow(data.WINDOW_WIDTH, data.WINDOW_HEIGHT, "Vulkan", nullptr, nullptr);
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-}
-
-// Initialize Vulkan
 void RenderApplication::initVulkan()
 {
-    createInstance();
-    setupDebugMessenger();
-    createSurface();
+    vulkanConnector.createInstance();
+    vulkanConnector.setupDebugMessenger();
+    windowManager.createSurface(vulkanConnector.getInstance(), surface);
     pickPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
@@ -105,90 +38,90 @@ void RenderApplication::initVulkan()
 
 void RenderApplication::mainLoop()
 {
-    while (!glfwWindowShouldClose(window))
-    {
-        glfwPollEvents();
-        drawFrame();
-    }
+    std::atomic<bool> keepRendenring(true);
+    std::thread renderThread(&RenderApplication::drawFrame, this, std::ref(keepRendenring));
+    windowManager.PollEventsWhileWindowOpened();
+    keepRendenring.store(false);
+    renderThread.join();
     vkDeviceWaitIdle(device);
 }
 
-void RenderApplication::drawFrame()
+void RenderApplication::drawFrame(std::atomic<bool> &keepRendenring)
 {
-    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    while (keepRendenring.load())
     {
-        recreateSwapChain();
-        return;
+
+        vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+        uint32_t imageIndex;
+        VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            recreateSwapChain();
+            return;
+        }
+        else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+        {
+            throw std::runtime_error("failed to acquire swap chain image!");
+        }
+
+        vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
+        vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+        recordCommandBuffer(commandBuffers[currentFrame], imageIndex, currentFrame);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStages;
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+
+        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+
+        if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to submit draw command buffer!");
+        }
+
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores;
+
+        VkSwapchainKHR swapChains[] = {swapChain};
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+
+        presentInfo.pImageIndices = &imageIndex;
+
+        result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || windowManager.isFrameBufferResized())
+        {
+            windowManager.setFramebufferResized(false);
+            recreateSwapChain();
+        }
+        else if (result != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to present swap chain image!");
+        }
+
+        currentFrame = (currentFrame + 1) % data.MAX_FRAMES_IN_FLIGHT;
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-    {
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
-
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
-
-    vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    recordCommandBuffer(commandBuffers[currentFrame], imageIndex, currentFrame);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
-
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
-
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to submit draw command buffer!");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-
-    VkSwapchainKHR swapChains[] = {swapChain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-
-    presentInfo.pImageIndices = &imageIndex;
-
-    result = vkQueuePresentKHR(presentQueue, &presentInfo);
-
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
-    {
-        framebufferResized = false;
-        recreateSwapChain();
-    }
-    else if (result != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-
-    currentFrame = (currentFrame + 1) % data.MAX_FRAMES_IN_FLIGHT;
 }
 
 void RenderApplication::cleanup()
 {
-    if (enableValidationLayers)
-    {
-        DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
-    }
     cleanupSwapChain();
     for (size_t i = 0; i < data.MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -215,16 +148,9 @@ void RenderApplication::cleanup()
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
     vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
-    glfwDestroyWindow(window);
-    glfwTerminate();
-}
-
-void RenderApplication::framebufferResizeCallback(GLFWwindow *window, int width, int height)
-{
-    auto app = reinterpret_cast<RenderApplication *>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
+    vkDestroySurfaceKHR(vulkanConnector.getInstance(), surface, nullptr);
+    vulkanConnector.destroyInstance();
+    windowManager.destroyWindow();
 }
 
 void RenderApplication::createDescriptorSets()
@@ -366,14 +292,12 @@ void RenderApplication::recreateSwapChain()
     int width = 0, height = 0;
     while (width == 0 || height == 0)
     {
-        glfwGetFramebufferSize(window, &width, &height);
-        glfwWaitEvents();
+        windowManager.getFramebufferSize(width, height);
     }
 
     vkDeviceWaitIdle(device);
 
     cleanupSwapChain();
-
     createSwapChain();
     createImageViews();
     createDepthResources();
@@ -537,7 +461,7 @@ void RenderApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    data.objects.drawAll(vertexBuffer, indexBuffer, commandBuffer, swapChainExtent.width, swapChainExtent.height, uniformBuffersMapped[currentFrame], pipelineLayout, descriptorSets[currentFrame]);
+    data.objects.drawAll(camera.getTransformationMatrix(), vertexBuffer, indexBuffer, commandBuffer, swapChainExtent.width, swapChainExtent.height, uniformBuffersMapped[currentFrame], pipelineLayout, descriptorSets[currentFrame]);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -553,10 +477,10 @@ void RenderApplication::createObjects()
     obj1.addMesh(Cube::generateMesh());
     Object obj2 = Object{};
     obj2.addMesh(Cube::generateMesh());
-    obj1.getTransformation().setScale({0.5, 0.5, 0.5});
-    obj1.getTransformation().setLocation({-0.2, -0.2, -0.2});
+    obj1.getTransformation().setLocation({0, 0, 0});
+    /*oj2.getTransformation().setLocation({0.2, 0.2, 0}); */
     data.objects.addObject(obj1, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
-    data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
+    /*     data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue); */
 }
 
 VkFormat RenderApplication::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -1096,14 +1020,6 @@ void RenderApplication::createSwapChain()
     swapChainExtent = extent;
 }
 
-void RenderApplication::createSurface()
-{
-    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create window surface!");
-    }
-}
-
 void RenderApplication::createLogicalDevice()
 {
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
@@ -1131,15 +1047,7 @@ void RenderApplication::createLogicalDevice()
     createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if (enableValidationLayers)
-    {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-    }
-    else
-    {
-        createInfo.enabledLayerCount = 0;
-    }
+    vulkanConnector.setupValidationLayersInfo(createInfo);
 
     if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
     {
@@ -1179,13 +1087,13 @@ RenderApplication::SwapChainSupportDetails RenderApplication::querySwapChainSupp
 void RenderApplication::pickPhysicalDevice()
 {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    vulkanConnector.enumeratePhysicalDevices(&deviceCount, nullptr);
     if (deviceCount == 0)
     {
         throw std::runtime_error("failed to find GPUs with Vulkan support!");
     }
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+    vulkanConnector.enumeratePhysicalDevices(&deviceCount, devices.data());
 
     for (const auto &device : devices)
     {
@@ -1290,7 +1198,7 @@ VkExtent2D RenderApplication::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &c
     else
     {
         int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+        windowManager.getFramebufferSize(width, height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -1319,132 +1227,4 @@ bool RenderApplication::checkDeviceExtensionSupport(VkPhysicalDevice device)
     }
 
     return requiredExtensions.empty();
-}
-
-void RenderApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
-{
-    createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = debugCallback;
-    createInfo.pUserData = nullptr; // Optional
-}
-
-void RenderApplication::setupDebugMessenger()
-{
-    if (!enableValidationLayers)
-        return;
-    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-    populateDebugMessengerCreateInfo(createInfo);
-    if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to set up debug messenger!");
-    }
-}
-
-// Create Vulkan instance
-void RenderApplication::createInstance()
-{
-
-    if (enableValidationLayers && !checkValidationLayerSupport())
-    {
-        throw std::runtime_error("validation layers requested, but not available!");
-    }
-
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Render Application";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
-
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-
-    // Link extensions
-
-    std::vector<const char *> glfwExtensions = getRequiredExtensions();
-
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> extensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-#ifndef NDEBUG
-    checkExtensionsValidity(glfwExtensions, extensions);
-#endif
-
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(glfwExtensions.size());
-    createInfo.ppEnabledExtensionNames = glfwExtensions.data();
-
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-    if (enableValidationLayers)
-    {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-
-        populateDebugMessengerCreateInfo(debugCreateInfo);
-        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
-    }
-    else
-    {
-        createInfo.enabledLayerCount = 0;
-
-        createInfo.pNext = nullptr;
-    }
-
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create instance!");
-    }
-}
-
-void RenderApplication::checkExtensionsValidity(const std::vector<const char *> &glfwExtensions, const std::vector<VkExtensionProperties> &extensions)
-{
-    for (const auto &glfwExtension : glfwExtensions)
-    {
-        bool extensionFound = false;
-        for (const auto &extension : extensions)
-        {
-            if (strcmp(glfwExtension, extension.extensionName) == 0)
-            {
-                extensionFound = true;
-            }
-        }
-        if (!extensionFound)
-        {
-            throw std::runtime_error(glfwExtension);
-        }
-    }
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL RenderApplication::debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-    void *pUserData)
-{
-
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-    return VK_FALSE;
-}
-
-std::vector<const char *> RenderApplication::getRequiredExtensions()
-{
-    uint32_t glfwExtensionCount = 0;
-    const char **glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-    if (enableValidationLayers)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-
-    return extensions;
 }

@@ -11,10 +11,22 @@ public:
 
     void setRotation(glm::vec3 newRotation);
 
+    void move(glm::vec3 movement);
+
+    void rotate(glm::vec3 rotation);
+
+    void scale(glm::vec3 scaling);
+
     glm::mat4 getTransformationMatrix();
+
+    glm::vec3 getForwardVector();
+
+    glm::vec3 getRightVector();
+
+    glm::vec3 getUpVector();
 
 private:
     glm::vec3 location = glm::vec3(0);
     glm::vec3 rotation = glm::vec3(0);
-    glm::vec3 scale = glm::vec3(1);
+    glm::vec3 scaleValue = glm::vec3(1);
 };

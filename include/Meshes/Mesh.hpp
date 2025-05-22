@@ -7,7 +7,7 @@
 class Mesh
 {
 public:
-    void addVertex(glm::vec3 position, glm::vec3 color);
+    void addVertex(glm::vec3 position, glm::vec3 color, glm::vec3 normal);
 
     void addTriangleFan(uint16_t index1, uint16_t index2, uint16_t index3);
 

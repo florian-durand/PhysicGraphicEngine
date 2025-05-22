@@ -1,9 +1,9 @@
 #include <Meshes/Mesh.hpp>
 #include <Meshes/Cube.hpp>
 
-void Mesh::addVertex(glm::vec3 position, glm::vec3 color)
+void Mesh::addVertex(glm::vec3 position, glm::vec3 color, glm::vec3 normal)
 {
-    vertices.emplace_back(ShaderVertex{position, color});
+    vertices.emplace_back(ShaderVertex{position, color, normal});
 }
 
 void Mesh::addTriangleFan(uint16_t index1, uint16_t index2, uint16_t index3)

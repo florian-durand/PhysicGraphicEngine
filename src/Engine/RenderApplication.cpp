@@ -6,7 +6,7 @@
 
 void RenderApplication::run()
 {
-    windowManager.initWindow();
+    windowManager.initWindow(camera);
     initVulkan();
     mainLoop();
     cleanup();
@@ -461,7 +461,7 @@ void RenderApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    data.objects.drawAll(vertexBuffer, indexBuffer, commandBuffer, swapChainExtent.width, swapChainExtent.height, uniformBuffersMapped[currentFrame], pipelineLayout, descriptorSets[currentFrame]);
+    data.objects.drawAll(camera.getTransformationMatrix(), vertexBuffer, indexBuffer, commandBuffer, swapChainExtent.width, swapChainExtent.height, uniformBuffersMapped[currentFrame], pipelineLayout, descriptorSets[currentFrame]);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -477,10 +477,10 @@ void RenderApplication::createObjects()
     obj1.addMesh(Cube::generateMesh());
     Object obj2 = Object{};
     obj2.addMesh(Cube::generateMesh());
-    obj1.getTransformation().setScale({0.5, 0.5, 0.5});
-    obj1.getTransformation().setLocation({-0.2, -0.2, -0.2});
+    obj1.getTransformation().setLocation({0, 0, 0});
+    /*oj2.getTransformation().setLocation({0.2, 0.2, 0}); */
     data.objects.addObject(obj1, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
-    data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue);
+    /*     data.objects.addObject(obj2, vertexBuffer, indexBuffer, stagingBuffer, mappedStagingBuffer, commandPool, device, graphicsQueue); */
 }
 
 VkFormat RenderApplication::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

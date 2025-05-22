@@ -10,7 +10,7 @@ class Objects
 public:
     void addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkBuffer &stagingBuffer, void *mappedStagingPtr, VkCommandPool &commandPool, VkDevice &device, VkQueue graphicsQueue);
 
-    void drawAll(VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet);
+    void drawAll(glm::mat4 view, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet);
 
 private:
     std::vector<Object> objects;

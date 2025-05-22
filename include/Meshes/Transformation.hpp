@@ -19,6 +19,12 @@ public:
 
     glm::mat4 getTransformationMatrix();
 
+    glm::vec3 getForwardVector();
+
+    glm::vec3 getRightVector();
+
+    glm::vec3 getUpVector();
+
 private:
     glm::vec3 location = glm::vec3(0);
     glm::vec3 rotation = glm::vec3(0);

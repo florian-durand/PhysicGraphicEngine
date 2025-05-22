@@ -4,10 +4,13 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
+#include <functional>
+#include <Engine/Camera.hpp>
+
 class WindowManager
 {
 public:
-    void initWindow();
+    void initWindow(Camera &camera);
 
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
 

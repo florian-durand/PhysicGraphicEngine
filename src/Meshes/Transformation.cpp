@@ -56,9 +56,25 @@ void Transformation::scale(glm::vec3 scaling)
 glm::mat4 Transformation::getTransformationMatrix()
 {
     glm::vec3 radianRotation = glm::radians(rotation);
-    glm::mat4 mat = glm::translate(glm::mat4(1.0f), location);
-    mat *= glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z);
-    mat = glm::scale(mat, scaleValue);
+    return glm::eulerAngleXYZ(radianRotation.x, radianRotation.y, radianRotation.z) * glm::translate(glm::mat4(1.0f), location) * glm::scale(glm::mat4(1.0f), scaleValue);
+}
 
-    return mat;
+glm::vec3 Transformation::getForwardVector()
+{
+    glm::mat4 mat = getTransformationMatrix();
+    std::cout << "forward : " << glm::vec3(mat[2])[0] << " " << glm::vec3(mat[2])[1] << " " << glm::vec3(mat[2])[2] << " " << std::endl;
+    return glm::vec3(mat[2]);
+}
+
+glm::vec3 Transformation::getRightVector()
+{
+    glm::mat4 mat = getTransformationMatrix();
+    std::cout << "right : " << glm::vec3(mat[0])[0] << " " << glm::vec3(mat[0])[1] << " " << glm::vec3(mat[0])[2] << " " << std::endl;
+    return glm::vec3(mat[0]);
+}
+
+glm::vec3 Transformation::getUpVector()
+{
+    glm::mat4 mat = getTransformationMatrix();
+    return glm::vec3(mat[1]);
 }

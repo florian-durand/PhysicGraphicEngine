@@ -18,7 +18,7 @@ public:
 
     void setTotalIndexCount(uint32_t totalIndexCount);
 
-    void draw(float delta, size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet);
+    void draw(float delta, glm::mat4 &PVMatrix, size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet);
 
 private:
     Meshes meshes;

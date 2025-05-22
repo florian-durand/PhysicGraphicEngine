@@ -1,4 +1,5 @@
 #include <Objects/Objects.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 size_t Objects::previousVertexOffset = 0;
 size_t Objects::previousIndexOffset = 0;
@@ -93,15 +94,22 @@ void Objects::addObject(Object object, VkBuffer &vertexBuffer, VkBuffer &indexBu
     objectRef.setTotalIndexCount(indexCount);
 }
 
-void Objects::drawAll(VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
+void Objects::drawAll(glm::mat4 view, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
 {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float delta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
     lastTime = currentTime;
+
+    glm::mat4 projectionMatrix, PVMatrix;
+    projectionMatrix = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 10.0f);
+    projectionMatrix[1][1] *= -1;
+    PVMatrix = projectionMatrix * view; // projectionMatrix * glm::lookAt(glm::vec3(3.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
     size_t index = 0;
+
     for (Object &object : objects)
     {
-        object.draw(delta, index, vertexBuffer, indexBuffer, commandBuffer, width, height, uboPtr, pipelineLayout, descriptorSet);
+        object.draw(delta, PVMatrix, index, vertexBuffer, indexBuffer, commandBuffer, width, height, uboPtr, pipelineLayout, descriptorSet);
         index++;
     }
 }

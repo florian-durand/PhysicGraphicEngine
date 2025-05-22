@@ -32,22 +32,16 @@ void Object::setTotalIndexCount(uint32_t totalIndexCount)
     this->totalIndexCount = totalIndexCount;
 }
 
-void Object::draw(float delta, size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
+void Object::draw(float delta, glm::mat4 &PVMatrix, size_t index, VkBuffer &vertexBuffer, VkBuffer &indexBuffer, VkCommandBuffer &commandBuffer, float width, float height, void *uboPtr, VkPipelineLayout &pipelineLayout, VkDescriptorSet &descriptorSet)
 {
 
-    tranformation.rotate({0, 0, delta * 1});
+    tranformation.rotate({0, 0, delta * 2});
 
     uint32_t dynamicOffset = index * sizeof(UniformBufferObject);
 
     UniformBufferObject ubo{};
 
-    ubo.model = tranformation.getTransformationMatrix();
-
-    ubo.view = glm::lookAt(glm::vec3(3.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
-    ubo.proj = glm::perspective(glm::radians(45.0f), width / height, 0.1f, 10.0f);
-
-    ubo.proj[1][1] *= -1;
+    ubo.mvp = PVMatrix * tranformation.getTransformationMatrix();
 
     memcpy((char *)uboPtr + dynamicOffset, &ubo, sizeof(ubo));
 
